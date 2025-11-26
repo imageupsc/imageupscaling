@@ -91,7 +91,7 @@ def calc_psnr(sr, hr):
 
 
 start_epoch = 100
-total_epochs = 130
+total_epochs = 120
 
 # Train cycle
 for epoch in range(start_epoch, total_epochs):
