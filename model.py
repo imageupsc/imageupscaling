@@ -3,61 +3,83 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class SRCNN(nn.Module):
+class ResidualDenseBlock(nn.Module):
     """
-    SRCNN model
+    Dense Block
     """
 
-    def __init__(self, scale=2):
-        super(SRCNN, self).__init__()
-        self.scale = scale
-        self.layer1 = nn.Conv2d(3, 64, kernel_size=9, padding=4)
-        self.layer2 = nn.Conv2d(64, 32, kernel_size=5, padding=2)
-        self.layer3 = nn.Conv2d(32, 3, kernel_size=5, padding=2)
-        self.relu = nn.ReLU(inplace=True)
-
-    def forward(self, x):
-        if self.scale != 1:
-            x = F.interpolate(
-                x, scale_factor=self.scale, mode="bicubic", align_corners=False
-            )
-        x = self.relu(self.layer1(x))
-        x = self.relu(self.layer2(x))
-        x = self.layer3(x)
-        return x
-
-
-class ResidualBlock(nn.Module):
-    def __init__(self, channels=64):
+    def __init__(self, nf=64, gc=32):
         super().__init__()
-        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1)
-        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1)
-        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(nf, gc, 3, 1, 1)
+        self.conv2 = nn.Conv2d(nf + gc, gc, 3, 1, 1)
+        self.conv3 = nn.Conv2d(nf + 2 * gc, gc, 3, 1, 1)
+        self.conv4 = nn.Conv2d(nf + 3 * gc, gc, 3, 1, 1)
+        self.conv5 = nn.Conv2d(nf + 4 * gc, nf, 3, 1, 1)
+        self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        self.scale = 0.2
 
     def forward(self, x):
-        residual = x
-        out = self.relu(self.conv1(x))
-        out = self.conv2(out)
-        return out + residual
+        x1 = self.lrelu(self.conv1(x))
+        x2 = self.lrelu(self.conv2(torch.cat([x, x1], 1)))
+        x3 = self.lrelu(self.conv3(torch.cat([x, x1, x2], 1)))
+        x4 = self.lrelu(self.conv4(torch.cat([x, x1, x2, x3], 1)))
+        x5 = self.conv5(torch.cat([x, x1, x2, x3, x4], 1))
+        return x + x5 * self.scale
 
 
-class EDSR(nn.Module):
+class RRDB(nn.Module):
     """
-    EDSR model
+    RRDB
     """
 
-    def __init__(self, scale=2, num_blocks=8, channels=64):
+    def __init__(self, nf=64, gc=32):
+        super().__init__()
+        self.RDB1 = ResidualDenseBlock(nf, gc)
+        self.RDB2 = ResidualDenseBlock(nf, gc)
+        self.RDB3 = ResidualDenseBlock(nf, gc)
+        self.scale = 0.2
+
+    def forward(self, x):
+        out = self.RDB1(x)
+        out = self.RDB2(out)
+        out = self.RDB3(out)
+        return x + out * self.scale
+
+
+class RRDBNet(nn.Module):
+    """
+    RRDBNet
+    """
+
+    def __init__(self, in_nc=3, out_nc=3, nf=64, nb=23, gc=32, scale=4):
         super().__init__()
         self.scale = scale
-        self.head = nn.Conv2d(3, channels, 3, padding=1)
-        self.body = nn.Sequential(*[ResidualBlock(channels) for _ in range(num_blocks)])
-        self.tail = nn.Conv2d(channels, 3 * (scale**2), 3, padding=1)
-        self.pixel_shuffle = nn.PixelShuffle(scale)
-        self.relu = nn.ReLU(inplace=True)
+        self.conv_first = nn.Conv2d(in_nc, nf, 3, 1, 1)
+        self.RRDB_trunk = nn.Sequential(*[RRDB(nf, gc) for _ in range(nb)])
+        self.trunk_conv = nn.Conv2d(nf, nf, 3, 1, 1)
+
+        self.upconv1 = nn.Conv2d(nf, nf, 3, 1, 1)
+        self.upconv2 = nn.Conv2d(nf, nf, 3, 1, 1)
+        self.pixel_shuffle = nn.PixelShuffle(2)
+
+        self.HR_conv = nn.Conv2d(nf, nf, 3, 1, 1)
+        self.conv_last = nn.Conv2d(nf, out_nc, 3, 1, 1)
+        self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
 
     def forward(self, x):
-        x = self.head(x)
-        x = self.body(x)
-        x = self.tail(x)
-        x = self.pixel_shuffle(x)
-        return x
+        fea = self.conv_first(x)
+        trunk = self.trunk_conv(self.RRDB_trunk(fea))
+        fea = fea + trunk
+
+        for _ in range(int(self.scale / 2)):
+            fea = self.lrelu(self.pixel_shuffle(self.upconv1(fea)))
+        fea = self.lrelu(self.HR_conv(fea))
+        out = self.conv_last(fea)
+        return out
+
+
+def build_model(in_nc=3, out_nc=3, nf=64, nb=23, gc=32, scale=4):
+    """
+    Model intialization
+    """
+    return RRDBNet(in_nc, out_nc, nf, nb, gc, scale)
