@@ -15,6 +15,7 @@ def calc_psnr(sr, hr):
 
 
 def train():
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     train_dataset = RealSRDataset(
@@ -22,7 +23,7 @@ def train():
     )
 
     train_loader = DataLoader(
-        train_dataset, batch_size=4, shuffle=True, num_workers=4, pin_memory=True
+        train_dataset, batch_size=2, shuffle=True, num_workers=4, pin_memory=True
     )
 
     # --- MODEL ---
@@ -35,7 +36,7 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     # --- TRAIN LOOP ---
-    epochs = 50
+    epochs = 2
 
     for epoch in range(1, epochs + 1):
         model.train()
