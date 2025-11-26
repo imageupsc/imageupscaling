@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import math
 from dataset import RealSRDataset
-from model import SRModel
+from model import SRCNN
 
 
 def calc_psnr(sr, hr):
@@ -19,7 +19,7 @@ def train():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     train_dataset = RealSRDataset(
-        root_dir="data/Train", scale=2, crop_size=96, is_train=True
+        root_dir="../data/Train", scale=2, crop_size=96, is_train=True
     )
 
     train_loader = DataLoader(
@@ -27,7 +27,7 @@ def train():
     )
 
     # --- MODEL ---
-    model = SRModel(scale=2).to(device)
+    model = SRCNN().to(device)
 
     # --- LOSS ---
     criterion = nn.L1Loss()
