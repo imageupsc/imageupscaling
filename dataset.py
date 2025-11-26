@@ -42,3 +42,24 @@ class RealSRDataset(Dataset):
         )
 
         return lr_crop, hr_crop
+
+    def __getitem__(self, idx):
+        name = self.images[idx]
+
+        lr_path = os.path.join(self.lr_dir, name)
+        hr_path = os.path.join(self.hr_dir, name)
+
+        lr = Image.open(lr_path).convert("RGB")
+        hr = Image.open(hr_path).convert("RGB")
+
+        if self.is_train:
+            lr, hr = self.random_crop(lr, hr)
+
+            if random.random() < 0.5:
+                lr = lr.transpose(Image.FLIP_LEFT_RIGHT)
+                hr = hr.transpose(Image.FLIP_LEFT_RIGHT)
+
+        lr = self.to_tensor(lr)
+        hr = self.to_tensor(hr)
+
+        return lr, hr
