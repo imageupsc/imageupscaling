@@ -54,7 +54,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 scale = 2
 batch_size = 8
 epochs = 100
-lr = 1e-4
+lr = 1e-5
 crop_size = 192
 checkpoint_dir = "checkpoints"
 os.makedirs(checkpoint_dir, exist_ok=True)
@@ -75,7 +75,7 @@ model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_model.pth"))
 
 criterion = CharbonnierLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+scheduler = None
 
 best_psnr = 0
 
@@ -90,8 +90,8 @@ def calc_psnr(sr, hr):
     return 10 * log10(1 / mse.item())
 
 
-start_epoch = 55
-total_epochs = 100
+start_epoch = 100
+total_epochs = 130
 
 # Train cycle
 for epoch in range(start_epoch, total_epochs):
@@ -129,7 +129,8 @@ for epoch in range(start_epoch, total_epochs):
         )
 
     # step LR scheduler
-    scheduler.step()
+    if scheduler:
+        scheduler.step()
 
     avg_loss = epoch_loss / len(train_loader)
     avg_psnr = epoch_psnr / len(train_loader)
