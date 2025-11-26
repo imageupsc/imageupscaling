@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from dataset import RealSRDataset
-from model import SRCNN
+from model import EDSR
 from tqdm import tqdm
 from math import log10
 import os
@@ -53,7 +53,7 @@ test_dataset = RealSRDataset("../data/Test", scale=scale, crop_size=96, is_train
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # model, loss, optimizer
-model = SRCNN(scale=scale).to(device)
+model = EDSR(scale=scale).to(device)
 criterion = nn.L1Loss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
