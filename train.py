@@ -71,6 +71,8 @@ test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # model, loss, optimizer
 model = EDSR(scale=scale).to(device)
+model.load_state_dict(torch.load(os.path.join(checkpoint_dir, "best_model.pth")))
+
 criterion = CharbonnierLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
@@ -88,8 +90,11 @@ def calc_psnr(sr, hr):
     return 10 * log10(1 / mse.item())
 
 
+start_epoch = 55
+total_epochs = 100
+
 # Train cycle
-for epoch in range(epochs):
+for epoch in range(start_epoch, total_epochs):
     model.train()
     epoch_loss = 0
     epoch_psnr = 0
