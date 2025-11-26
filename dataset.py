@@ -1,70 +1,48 @@
 import os
+from glob import glob
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
-import torchvision.transforms as T
-import random
+import torchvision.transforms as transforms
 
 
 class RealSRDataset(Dataset):
-    def __init__(self, root_dir, scale=2, crop_size=96, is_train=True):
+    """
+    RealSR V3 Dataset
+    LR/HR images in folders like:
+    ../data/Canon/Train/2/*.png
+    """
+
+    def __init__(self, root_dir="../data/", scale=4, split="Train"):
         super().__init__()
-
         self.scale = scale
-        self.crop_size = crop_size
-        self.is_train = is_train
+        self.lr_paths = []
+        self.hr_paths = []
 
-        self.root = os.path.join(root_dir, str(scale))
+        cameras = ["Canon", "Nikon"]
+        scales = ["2", "3", "4"]
 
-        self.pairs = []
-        for filename in os.listdir(self.root):
+        for cam in cameras:
+            for sc in scales:
+                lr_dir = os.path.join(root_dir, cam, split, sc)
+                hr_dir = os.path.join(root_dir, cam, split, sc)
 
-            if f"LR{scale}" in filename:
-                lr_path = os.path.join(self.root, filename)
+                for hr_path in glob(os.path.join(hr_dir, "*_HR.png")):
+                    base_name = os.path.basename(hr_path).replace("_HR.png", "")
+                    lr_path = os.path.join(lr_dir, f"{base_name}_LR{sc}.png")
+                    if os.path.exists(lr_path):
+                        self.lr_paths.append(lr_path)
+                        self.hr_paths.append(hr_path)
 
-                hr_name = filename.replace(f"LR{scale}", "HR")
-                hr_path = os.path.join(self.root, hr_name)
-
-                if os.path.exists(hr_path):
-                    self.pairs.append((lr_path, hr_path))
-
-        self.to_tensor = T.ToTensor()
+        self.transform = transforms.ToTensor()
 
     def __len__(self):
-        return len(self.pairs)
-
-    def random_crop(self, lr, hr):
-        w, h = lr.size
-
-        lr_x = random.randint(0, w - self.crop_size)
-        lr_y = random.randint(0, h - self.crop_size)
-
-        lr_crop = lr.crop((lr_x, lr_y, lr_x + self.crop_size, lr_y + self.crop_size))
-
-        hr_crop = hr.crop(
-            (
-                lr_x * self.scale,
-                lr_y * self.scale,
-                (lr_x + self.crop_size) * self.scale,
-                (lr_y + self.crop_size) * self.scale,
-            )
-        )
-
-        return lr_crop, hr_crop
+        return len(self.hr_paths)
 
     def __getitem__(self, idx):
-        lr_path, hr_path = self.pairs[idx]
+        lr_img = Image.open(self.lr_paths[idx]).convert("RGB")
+        hr_img = Image.open(self.hr_paths[idx]).convert("RGB")
 
-        lr = Image.open(lr_path).convert("RGB")
-        hr = Image.open(hr_path).convert("RGB")
-
-        if self.is_train:
-            lr, hr = self.random_crop(lr, hr)
-            if random.random() < 0.5:
-                lr = lr.transpose(Image.FLIP_LEFT_RIGHT)
-                hr = hr.transpose(Image.FLIP_LEFT_RIGHT)
-
-        lr = self.to_tensor(lr)
-        hr = self.to_tensor(hr)
-
-        return lr, hr
+        lr_img = self.transform(lr_img)
+        hr_img = self.transform(hr_img)
+        return lr_img, hr_img
