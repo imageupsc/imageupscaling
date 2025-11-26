@@ -7,6 +7,13 @@ from dataset import RealSRDataset
 from model import SRModel
 
 
+def calc_psnr(sr, hr):
+    mse = torch.mean((sr - hr) ** 2)
+    if mse == 0:
+        return 100
+    return 20 * torch.log10(1.0 / torch.sqrt(mse))
+
+
 def train():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
