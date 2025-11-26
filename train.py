@@ -10,7 +10,9 @@ import os
 
 
 def ssim(img1, img2, window_size=11, size_average=True):
-    """Compute SSIM for batch of images"""
+    """
+    Compute SSIM for batch of images
+    """
     C1 = 0.01**2
     C2 = 0.03**2
 
@@ -32,33 +34,55 @@ def ssim(img1, img2, window_size=11, size_average=True):
     return ssim_map.mean() if size_average else ssim_map.mean(1).mean(1).mean(1)
 
 
+class CharbonnierLoss(nn.Module):
+    """
+    Charbonnier Loss
+    """
+
+    def __init__(self, eps=1e-6):
+        super(CharbonnierLoss, self).__init__()
+        self.eps = eps
+
+    def forward(self, x, y):
+        diff = x - y
+        loss = torch.mean(torch.sqrt(diff * diff + self.eps * self.eps))
+        return loss
+
+
 # properties
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 scale = 2
-batch_size = 4
-epochs = 50
+batch_size = 8
+epochs = 70
 lr = 1e-4
+crop_size = 128
 checkpoint_dir = "checkpoints"
 os.makedirs(checkpoint_dir, exist_ok=True)
 
-
-train_dataset = RealSRDataset("../data/Train", scale=scale, crop_size=96, is_train=True)
+train_dataset = RealSRDataset(
+    "../data/Train", scale=scale, crop_size=crop_size, is_train=True
+)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-test_dataset = RealSRDataset("../data/Test", scale=scale, crop_size=96, is_train=False)
+test_dataset = RealSRDataset(
+    "../data/Test", scale=scale, crop_size=crop_size, is_train=False
+)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # model, loss, optimizer
 model = EDSR(scale=scale).to(device)
-criterion = nn.L1Loss()
+criterion = CharbonnierLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 
 best_psnr = 0
 
 
 def calc_psnr(sr, hr):
-    """Calculating PSNR"""
-    mse = criterion(sr, hr)
+    """
+    Calculating PSNR
+    """
+    mse = torch.mean((sr - hr) ** 2)
     if mse == 0:
         return 100
     return 10 * log10(1 / mse.item())
@@ -98,6 +122,9 @@ for epoch in range(epochs):
                 "ssim": f"{ssim_val.item():.4f}",
             }
         )
+
+    # step LR scheduler
+    scheduler.step()
 
     avg_loss = epoch_loss / len(train_loader)
     avg_psnr = epoch_psnr / len(train_loader)
