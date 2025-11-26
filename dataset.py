@@ -14,15 +14,24 @@ class RealSRDataset(Dataset):
         self.crop_size = crop_size
         self.is_train = is_train
 
-        self.lr_dir = os.path.join(root_dir, str(scale))
-        self.hr_dir = os.path.join(root_dir.replace("Train", "Train"), str(scale))
+        self.root = os.path.join(root_dir, str(scale))
 
-        self.images = sorted(os.listdir(self.lr_dir))
+        self.pairs = []
+        for filename in os.listdir(self.root):
+
+            if f"LR{scale}" in filename:
+                lr_path = os.path.join(self.root, filename)
+
+                hr_name = filename.replace(f"LR{scale}", "HR")
+                hr_path = os.path.join(self.root, hr_name)
+
+                if os.path.exists(hr_path):
+                    self.pairs.append((lr_path, hr_path))
 
         self.to_tensor = T.ToTensor()
 
     def __len__(self):
-        return len(self.images)
+        return len(self.pairs)
 
     def random_crop(self, lr, hr):
         w, h = lr.size
@@ -44,17 +53,13 @@ class RealSRDataset(Dataset):
         return lr_crop, hr_crop
 
     def __getitem__(self, idx):
-        name = self.images[idx]
-
-        lr_path = os.path.join(self.lr_dir, name)
-        hr_path = os.path.join(self.hr_dir, name)
+        lr_path, hr_path = self.pairs[idx]
 
         lr = Image.open(lr_path).convert("RGB")
         hr = Image.open(hr_path).convert("RGB")
 
         if self.is_train:
             lr, hr = self.random_crop(lr, hr)
-
             if random.random() < 0.5:
                 lr = lr.transpose(Image.FLIP_LEFT_RIGHT)
                 hr = hr.transpose(Image.FLIP_LEFT_RIGHT)
