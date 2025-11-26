@@ -53,9 +53,9 @@ class CharbonnierLoss(nn.Module):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 scale = 2
 batch_size = 8
-epochs = 70
+epochs = 100
 lr = 1e-4
-crop_size = 128
+crop_size = 192
 checkpoint_dir = "checkpoints"
 os.makedirs(checkpoint_dir, exist_ok=True)
 
