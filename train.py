@@ -55,8 +55,8 @@ def calc_psnr(sr, hr):
 # properties
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 scale = 2
-crop_size = 192
-batch_size = 8
+crop_size = 96
+batch_size = 1
 epochs = 5
 lr = 1e-4
 checkpoint_dir = "checkpoints"

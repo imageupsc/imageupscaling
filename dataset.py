@@ -44,13 +44,20 @@ class RealSRDataset(Dataset):
         lr_img = Image.open(self.lr_paths[idx]).convert("RGB")
         hr_img = Image.open(self.hr_paths[idx]).convert("RGB")
 
-        i, j, h, w = T.RandomCrop.get_params(
-            lr_img, output_size=(self.crop_size, self.crop_size)
+        w, h = lr_img.size
+        crop_size = min(self.crop_size, h, w)
+
+        i, j, h_crop, w_crop = T.RandomCrop.get_params(
+            lr_img, output_size=(crop_size, crop_size)
         )
 
-        lr_img = T.functional.crop(lr_img, i, j, h, w)
+        lr_img = T.functional.crop(lr_img, i, j, h_crop, w_crop)
         hr_img = T.functional.crop(
-            hr_img, i * self.scale, j * self.scale, h * self.scale, w * self.scale
+            hr_img,
+            i * self.scale,
+            j * self.scale,
+            h_crop * self.scale,
+            w_crop * self.scale,
         )
 
         lr_img = self.transform(lr_img)

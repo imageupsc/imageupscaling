@@ -8,7 +8,7 @@ class ResidualDenseBlock(nn.Module):
     Dense Block
     """
 
-    def __init__(self, nf=64, gc=32):
+    def __init__(self, nf=32, gc=16):
         super().__init__()
         self.conv1 = nn.Conv2d(nf, gc, 3, 1, 1)
         self.conv2 = nn.Conv2d(nf + gc, gc, 3, 1, 1)
@@ -32,7 +32,7 @@ class RRDB(nn.Module):
     RRDB
     """
 
-    def __init__(self, nf=64, gc=32):
+    def __init__(self, nf=32, gc=16):
         super().__init__()
         self.RDB1 = ResidualDenseBlock(nf, gc)
         self.RDB2 = ResidualDenseBlock(nf, gc)
@@ -51,7 +51,7 @@ class RRDBNet(nn.Module):
     RRDBNet
     """
 
-    def __init__(self, in_nc=3, out_nc=3, nf=64, nb=23, gc=32, scale=4):
+    def __init__(self, in_nc=3, out_nc=3, nf=32, nb=8, gc=16, scale=4):
         super().__init__()
         self.scale = scale
         self.conv_first = nn.Conv2d(in_nc, nf, 3, 1, 1)
@@ -62,7 +62,7 @@ class RRDBNet(nn.Module):
         self.upconv2 = nn.Conv2d(nf, nf, 3, 1, 1)
         self.pixel_shuffle = nn.PixelShuffle(2)
 
-        self.HR_conv = nn.Conv2d(nf, nf, 3, 1, 1)
+        self.HR_conv = nn.Conv2d(nf // 4, nf, 3, 1, 1)
         self.conv_last = nn.Conv2d(nf, out_nc, 3, 1, 1)
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
 
@@ -78,7 +78,7 @@ class RRDBNet(nn.Module):
         return out
 
 
-def build_model(in_nc=3, out_nc=3, nf=64, nb=23, gc=32, scale=4):
+def build_model(in_nc=3, out_nc=3, nf=32, nb=8, gc=16, scale=4):
     """
     Model intialization
     """
