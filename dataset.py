@@ -3,7 +3,7 @@ from glob import glob
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 
 
 class RealSRDataset(Dataset):
@@ -13,9 +13,10 @@ class RealSRDataset(Dataset):
     ../data/Canon/Train/2/*.png
     """
 
-    def __init__(self, root_dir="../data/", scale=4, split="Train"):
+    def __init__(self, root_dir="../data/", scale=4, crop_size=192, split="Train"):
         super().__init__()
         self.scale = scale
+        self.crop_size = crop_size
         self.lr_paths = []
         self.hr_paths = []
 
@@ -34,7 +35,7 @@ class RealSRDataset(Dataset):
                         self.lr_paths.append(lr_path)
                         self.hr_paths.append(hr_path)
 
-        self.transform = transforms.ToTensor()
+        self.transform = T.ToTensor()
 
     def __len__(self):
         return len(self.hr_paths)
@@ -43,6 +44,16 @@ class RealSRDataset(Dataset):
         lr_img = Image.open(self.lr_paths[idx]).convert("RGB")
         hr_img = Image.open(self.hr_paths[idx]).convert("RGB")
 
+        i, j, h, w = T.RandomCrop.get_params(
+            lr_img, output_size=(self.crop_size, self.crop_size)
+        )
+
+        lr_img = T.functional.crop(lr_img, i, j, h, w)
+        hr_img = T.functional.crop(
+            hr_img, i * self.scale, j * self.scale, h * self.scale, w * self.scale
+        )
+
         lr_img = self.transform(lr_img)
         hr_img = self.transform(hr_img)
+
         return lr_img, hr_img
