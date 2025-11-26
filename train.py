@@ -9,10 +9,6 @@ from math import log10
 import os
 
 
-import torch
-import torch.nn.functional as F
-
-
 def ssim(img1, img2, window_size=11, size_average=True):
     """Compute SSIM for batch of images"""
     C1 = 0.01**2
@@ -61,9 +57,7 @@ best_psnr = 0
 
 
 def calc_psnr(sr, hr):
-    """
-    Calculating PSNR
-    """
+    """Calculating PSNR"""
     mse = criterion(sr, hr)
     if mse == 0:
         return 100
@@ -113,9 +107,25 @@ for epoch in range(epochs):
         f"Epoch {epoch+1} - Avg Loss: {avg_loss:.4f}, Avg PSNR: {avg_psnr:.2f} dB, Avg SSIM: {avg_ssim:.4f}"
     )
 
+    # Test evaluation on test set
+    model.eval()
+    test_psnr = 0
+    test_ssim = 0
+    with torch.no_grad():
+        for lr_imgs, hr_imgs in test_loader:
+            lr_imgs = lr_imgs.to(device)
+            hr_imgs = hr_imgs.to(device)
+            sr_imgs = model(lr_imgs)
+            test_psnr += calc_psnr(sr_imgs, hr_imgs)
+            test_ssim += ssim(sr_imgs, hr_imgs).item()
+
+    avg_test_psnr = test_psnr / len(test_loader)
+    avg_test_ssim = test_ssim / len(test_loader)
+    print(f"Test PSNR: {avg_test_psnr:.2f} dB, Test SSIM: {avg_test_ssim:.4f}")
+
     # Saving best model
-    if avg_psnr > best_psnr:
-        best_psnr = avg_psnr
+    if avg_test_psnr > best_psnr:
+        best_psnr = avg_test_psnr
         torch.save(model.state_dict(), os.path.join(checkpoint_dir, "best_model.pth"))
         print(f"--> New best model saved at epoch {epoch+1} (PSNR={best_psnr:.2f})")
 
