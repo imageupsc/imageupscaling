@@ -80,7 +80,7 @@ test_dataset = RealSRDataset(
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 
-# model, loss, optimizer
+# model, loss, optimizer, scheduler
 model = EDSR(scale=scale, num_blocks=8, channels=64).to(device)
 criterion = CharbonnierLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
