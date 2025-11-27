@@ -60,9 +60,9 @@ def calc_psnr(sr, hr):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 scale = 2
-crop_size = 128
-batch_size = 4
-epochs = 50
+crop_size = 192
+batch_size = 8
+epochs = 70
 lr = 1e-4
 
 checkpoint_dir = "checkpoints_edsr"
@@ -80,10 +80,14 @@ test_dataset = RealSRDataset(
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 
-# model
+# model, loss, optimizer
 model = EDSR(scale=scale, num_blocks=8, channels=64).to(device)
 criterion = CharbonnierLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode="max", factor=0.5, patience=5
+)
+
 
 best_psnr = 0
 
@@ -147,9 +151,11 @@ for epoch in range(epochs):
 
     print(f"Validation: PSNR={avg_val_psnr:.2f}, SSIM={avg_val_ssim:.4f}")
 
+    scheduler.step(avg_val_psnr)
+
     if avg_val_psnr > best_psnr:
         best_psnr = avg_val_psnr
         torch.save(model.state_dict(), os.path.join(checkpoint_dir, "best_model.pth"))
-        print(f"🔥 New BEST model saved! PSNR={avg_val_psnr:.2f}\n")
+        print(f"New BEST model saved! PSNR={avg_val_psnr:.2f}\n")
 
 print("Training finished!")
