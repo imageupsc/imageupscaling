@@ -29,3 +29,28 @@ def load_model():
 
 
 upsampler = load_model()
+
+uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+if uploaded:
+    img = Image.open(uploaded).convert("RGB")
+
+    if st.button("Увеличить изображение"):
+        st.write("Обработка изображения...")
+        img_np = np.array(img)
+        output, _ = upsampler.enhance(img_np, outscale=4)
+        result = Image.fromarray(output)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Оригинал")
+            st.image(img, use_column_width=True)
+        with col2:
+            st.subheader("Увеличенное ×4")
+            st.image(result, use_column_width=True)
+
+        result.save("upscaled_result.png")
+        st.download_button(
+            label="Скачать увеличенное изображение",
+            data=open("upscaled_result.png", "rb"),
+            file_name="upscaled.png",
+        )
