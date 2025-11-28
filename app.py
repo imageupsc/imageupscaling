@@ -75,9 +75,15 @@ if uploaded:
 
         st.divider()
         st.subheader("Художественные стили")
-        style = st.selectbox(
-            "Выберите стиль:", ["candy", "mosaic", "rain_princess", "udnie"]
-        )
+        STYLE_LABELS = {
+            "candy": "Конфетный",
+            "mosaic": "Мозаика",
+            "rain_princess": "Принцесса дождя",
+            "udnie": "Удни (абстракция)",
+        }
+
+        style_display = st.selectbox("Выберите стиль:", list(STYLE_LABELS.values()))
+        style = [k for k, v in STYLE_LABELS.items() if v == style_display][0]
 
         if st.button("Применить стиль"):
             with st.spinner("Применение стиля..."):
