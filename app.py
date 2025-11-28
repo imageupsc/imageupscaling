@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 from realesrgan import RealESRGANer
+from style_transfer import load_style_model, apply_style
+
 
 st.set_page_config(page_title="Увеличение разрешения изображения", layout="wide")
 st.title("Увеличение разрешения с помощью Real-ESRGAN")
@@ -54,3 +56,12 @@ if uploaded:
             data=open("upscaled_result.png", "rb"),
             file_name="upscaled.png",
         )
+
+
+st.subheader("Художественные стили")
+style = st.selectbox("Выберите стиль:", ["candy", "mosaic", "rain_princess", "udnie"])
+
+if st.button("Применить стиль"):
+    model = load_style_model(style)
+    styled = apply_style(model, img)
+    st.image(styled)
