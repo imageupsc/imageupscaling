@@ -9,7 +9,7 @@ import io
 
 
 st.set_page_config(page_title="Увеличение разрешения изображения", layout="wide")
-st.title("Увеличение разрешения с помощью Real-ESRGAN")
+st.title("Генерация и обработка изображений с помощью нейросетей")
 
 if "upscaled_image" not in st.session_state:
     st.session_state.upscaled_image = None
@@ -46,7 +46,7 @@ if uploaded:
     img = Image.open(uploaded).convert("RGB")
     st.session_state.original_image = img
 
-    if st.button("Увеличить качество"):
+    if st.button("Увеличить разрешение"):
         with st.spinner("Обработка изображения..."):
             img_np = np.array(img)
             output, _ = upsampler.enhance(img_np, outscale=4)
@@ -61,13 +61,13 @@ if uploaded:
             st.subheader("Оригинал")
             st.image(st.session_state.original_image, use_container_width=True)
         with col2:
-            st.subheader("Увеличенное ×4")
+            st.subheader("Увеличенное")
             st.image(st.session_state.upscaled_image, use_container_width=True)
 
         img_buffer = io.BytesIO()
         st.session_state.upscaled_image.save(img_buffer, format="PNG")
         st.download_button(
-            label="Скачать увеличенное изображение",
+            label="Скачать изображение",
             data=img_buffer.getvalue(),
             file_name="upscaled.png",
             mime="image/png",
