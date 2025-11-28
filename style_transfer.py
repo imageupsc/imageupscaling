@@ -75,3 +75,27 @@ class TransformerNet(nn.Module):
         y = self.relu(self.in5(self.deconv2(y)))
         y = self.deconv3(y)
         return y
+
+
+def load_style_model(style):
+    model = TransformerNet()
+    path = f"saved_models/{style}.pth"
+    model.load_state_dict(torch.load(path, map_location="cpu"))
+    model.eval()
+    return model
+
+
+def apply_style(model, pil_img):
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Lambda(lambda x: x.mul(255))]
+    )
+
+    img_tensor = transform(pil_img).unsqueeze(0)
+
+    with torch.no_grad():
+        output = model(img_tensor).cpu()
+
+    output = output.squeeze(0).clamp(0, 255)
+    output_img = output.permute(1, 2, 0).numpy().astype("uint8")
+
+    return Image.fromarray(output_img)
