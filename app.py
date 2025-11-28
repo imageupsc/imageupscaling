@@ -11,7 +11,6 @@ import io
 st.set_page_config(page_title="Увеличение разрешения изображения", layout="wide")
 st.title("Увеличение разрешения с помощью Real-ESRGAN")
 
-# Инициализация session state
 if "upscaled_image" not in st.session_state:
     st.session_state.upscaled_image = None
 if "original_image" not in st.session_state:
@@ -41,34 +40,30 @@ def load_model():
 
 upsampler = load_model()
 
-# Шаг 1: Загрузка изображения
 uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
 
 if uploaded:
     img = Image.open(uploaded).convert("RGB")
     st.session_state.original_image = img
-    
-    # Шаг 2: Кнопка увеличения качества
+
     if st.button("Увеличить качество"):
         with st.spinner("Обработка изображения..."):
             img_np = np.array(img)
             output, _ = upsampler.enhance(img_np, outscale=4)
             result = Image.fromarray(output)
             st.session_state.upscaled_image = result
-            st.session_state.styled_image = None  # Сброс стилизованного изображения
+            st.session_state.styled_image = None
             st.rerun()
-    
-    # Шаг 3: Показ увеличенного изображения и возможность скачивания
+
     if st.session_state.upscaled_image is not None:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Оригинал")
-            st.image(st.session_state.original_image, use_column_width=True)
+            st.image(st.session_state.original_image, use_container_width=True)
         with col2:
             st.subheader("Увеличенное ×4")
-            st.image(st.session_state.upscaled_image, use_column_width=True)
-        
-        # Кнопка скачивания увеличенного изображения
+            st.image(st.session_state.upscaled_image, use_container_width=True)
+
         img_buffer = io.BytesIO()
         st.session_state.upscaled_image.save(img_buffer, format="PNG")
         st.download_button(
@@ -77,25 +72,24 @@ if uploaded:
             file_name="upscaled.png",
             mime="image/png",
         )
-        
-        # Шаг 4: Секция с художественными стилями (появляется только после увеличения)
+
         st.divider()
         st.subheader("Художественные стили")
-        style = st.selectbox("Выберите стиль:", ["candy", "mosaic", "rain_princess", "udnie"])
-        
+        style = st.selectbox(
+            "Выберите стиль:", ["candy", "mosaic", "rain_princess", "udnie"]
+        )
+
         if st.button("Применить стиль"):
             with st.spinner("Применение стиля..."):
                 model = load_style_model(style)
                 styled = apply_style(model, st.session_state.upscaled_image)
                 st.session_state.styled_image = styled
                 st.rerun()
-        
-        # Показ стилизованного изображения и возможность скачивания
+
         if st.session_state.styled_image is not None:
             st.subheader("Стилизованное изображение")
-            st.image(st.session_state.styled_image, use_column_width=True)
-            
-            # Кнопка скачивания стилизованного изображения
+            st.image(st.session_state.styled_image, use_container_width=True)
+
             styled_buffer = io.BytesIO()
             st.session_state.styled_image.save(styled_buffer, format="PNG")
             st.download_button(
