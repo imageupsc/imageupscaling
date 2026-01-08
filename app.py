@@ -1,34 +1,50 @@
-import streamlit as st
-from PIL import Image
-import numpy as np
-import torch
-from realesrgan.archs.srvgg_arch import SRVGGNetCompact
-from realesrgan import RealESRGANer
-from style_transfer import load_style_model, apply_style
-from image_generation import ImageGenerator
 import io
+import numpy as np
+import streamlit as st
+import torch
+from PIL import Image
+from realesrgan import RealESRGANer
+from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 
+from image_generation import ImageGenerator
+from style_transfer import load_style_model, apply_style
+
+
+# ---------------- Page config ----------------
 st.set_page_config(page_title="Генерация и обработка изображений", layout="wide")
+st.title("Генерация и обработка изображений с помощью нейросетей")
+
+# фикс "дёрганья" интерфейса из-за появления/исчезновения скроллбара
 st.markdown(
     """
     <style>
       html, body { overflow-y: scroll; }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
-st.title("Генерация и обработка изображений с помощью нейросетей")
 
-# -------- Session state --------
-if "original_image" not in st.session_state:
-    st.session_state.original_image = None
-if "upscaled_image" not in st.session_state:
-    st.session_state.upscaled_image = None
-if "styled_image" not in st.session_state:
-    st.session_state.styled_image = None
+# ---------------- Session state ----------------
+defaults = {
+    "original_image": None,
+    "upscaled_image": None,
+    "styled_image": None,
+    "is_generating": False,
+    "is_upscaling": False,
+    "is_styling": False,
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 
-# -------- Models loading (cached) --------
+# ---------------- Cached model loaders ----------------
+@st.cache_resource
+def load_generator():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return ImageGenerator(device=device)
+
+
 @st.cache_resource
 def load_upsampler():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -42,103 +58,171 @@ def load_upsampler():
         tile=0,
         tile_pad=10,
         pre_pad=0,
-        half=False,
+        half=False,          # если будет GPU, можно поставить True (но не всегда стабильно на всех окружениях)
         device=device,
     )
     return upsampler
 
 
-@st.cache_resource
-def load_generator():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return ImageGenerator(device=device)
-
-
-upsampler = load_upsampler()
 generator = load_generator()
+upsampler = load_upsampler()
 
-# -------- UI: Text-to-Image --------
+
+# ---------------- UI: Controls ----------------
 st.subheader("Генерация по тексту")
 
 prompt = st.text_area(
     "Текстовое описание (prompt)",
-    value="A fir tree in a winter forest, digital illustration, soft colors, detailed, cinematic lighting",
+    value="A small cat, realistic photo",
     height=110,
+    key="prompt",
 )
 
 negative = st.text_input(
     "Нежелательные элементы (negative prompt)",
     value="blurry, low quality, artifacts, text, watermark",
+    key="negative",
 )
 
-steps = st.slider("Шаги диффузии", 10, 50, 25)
-guidance = st.slider("Guidance scale", 1.0, 12.0, 7.5)
+c1, c2 = st.columns(2)
+with c1:
+    steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
+with c2:
+    guidance = st.slider("Guidance scale", 1.0, 12.0, 7.5, key="guidance")
 
-col_btn1, col_btn2 = st.columns([1, 2])
-with col_btn1:
-    if st.button("Сгенерировать изображение 1"):
+btn_col1, btn_col2 = st.columns([1, 1])
+with btn_col1:
+    gen_clicked = st.button(
+        "Сгенерировать изображение",
+        key="btn_generate",
+        disabled=st.session_state.is_generating,
+        use_container_width=True,
+    )
+with btn_col2:
+    reset_clicked = st.button(
+        "Сбросить результат",
+        key="btn_reset",
+        disabled=st.session_state.is_generating or st.session_state.is_upscaling or st.session_state.is_styling,
+        use_container_width=True,
+    )
+
+# placeholders (чтобы UI не прыгал)
+status_ph = st.empty()
+preview_ph = st.empty()
+download_gen_ph = st.empty()
+
+upscale_section_ph = st.empty()
+style_section_ph = st.empty()
+
+
+# ---------------- Actions: Reset ----------------
+if reset_clicked:
+    st.session_state.original_image = None
+    st.session_state.upscaled_image = None
+    st.session_state.styled_image = None
+    status_ph.empty()
+    preview_ph.empty()
+    download_gen_ph.empty()
+    upscale_section_ph.empty()
+    style_section_ph.empty()
+
+
+# ---------------- Actions: Generate ----------------
+if gen_clicked:
+    st.session_state.is_generating = True
+    st.session_state.upscaled_image = None
+    st.session_state.styled_image = None
+
+    status_ph.info("Генерация изображения...")
+
+    try:
         with st.spinner("Генерация изображения..."):
-            gen_img = generator.generate(
+            img = generator.generate(
                 prompt=prompt,
                 negative_prompt=negative,
-                steps=steps,
-                guidance=guidance,
+                steps=int(steps),
+                guidance=float(guidance),
             )
-            st.session_state.original_image = gen_img
-            st.session_state.upscaled_image = None
-            st.session_state.styled_image = None
-
-with col_btn2:
-    if st.button("Сбросить результат"):
+        st.session_state.original_image = img
+        status_ph.success("Генерация завершена.")
+    except Exception as e:
         st.session_state.original_image = None
-        st.session_state.upscaled_image = None
-        st.session_state.styled_image = None
+        status_ph.error(f"Ошибка генерации: {e}")
+    finally:
+        st.session_state.is_generating = False
 
-# -------- Preview generated image --------
-if st.session_state.original_image is not None:
-    st.divider()
-    st.subheader("Сгенерированное изображение 2")
-    st.image(st.session_state.original_image, width="stretch")
+
+# ---------------- Preview generated ----------------
+if st.session_state.original_image is None:
+    preview_ph.info("Введите текстовое описание и нажмите «Сгенерировать изображение».")
+else:
+    preview_ph.subheader("Сгенерированное изображение")
+    preview_ph.image(st.session_state.original_image, width="stretch")
 
     gen_buffer = io.BytesIO()
     st.session_state.original_image.save(gen_buffer, format="PNG")
-    st.download_button(
+    download_gen_ph.download_button(
         label="Скачать сгенерированное изображение",
         data=gen_buffer.getvalue(),
         file_name="generated.png",
         mime="image/png",
+        key="dl_generated",
     )
 
-    # -------- Upscale --------
-    st.divider()
-    st.subheader("Увеличение разрешения (Real-ESRGAN x4)")
 
-    if st.button("Увеличить разрешение"):
-        with st.spinner("Увеличение разрешения..."):
-            img_np = np.array(st.session_state.original_image.convert("RGB"))
-            output, _ = upsampler.enhance(img_np, outscale=4)
-            st.session_state.upscaled_image = Image.fromarray(output)
-            st.session_state.styled_image = None
+# ---------------- Upscale block ----------------
+if st.session_state.original_image is not None:
+    with upscale_section_ph.container():
+        st.divider()
+        st.subheader("Увеличение разрешения (Real-ESRGAN x4)")
 
-    if st.session_state.upscaled_image is not None:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("До")
-            st.image(st.session_state.original_image, width="stretch")
-        with col2:
-            st.subheader("После (x4)")
-            st.image(st.session_state.upscaled_image, width="stretch")
-
-        up_buffer = io.BytesIO()
-        st.session_state.upscaled_image.save(up_buffer, format="PNG")
-        st.download_button(
-            label="Скачать увеличенное изображение",
-            data=up_buffer.getvalue(),
-            file_name="upscaled.png",
-            mime="image/png",
+        up_clicked = st.button(
+            "Увеличить разрешение",
+            key="btn_upscale",
+            disabled=st.session_state.is_upscaling or st.session_state.is_generating,
+            use_container_width=True,
         )
 
-        # -------- Style transfer --------
+        if up_clicked:
+            st.session_state.is_upscaling = True
+            status_ph.info("Увеличение разрешения...")
+
+            try:
+                with st.spinner("Увеличение разрешения..."):
+                    img_np = np.array(st.session_state.original_image.convert("RGB"))
+                    output, _ = upsampler.enhance(img_np, outscale=4)
+                    st.session_state.upscaled_image = Image.fromarray(output)
+                    st.session_state.styled_image = None
+                status_ph.success("Увеличение разрешения завершено.")
+            except Exception as e:
+                st.session_state.upscaled_image = None
+                status_ph.error(f"Ошибка апскейла: {e}")
+            finally:
+                st.session_state.is_upscaling = False
+
+        if st.session_state.upscaled_image is not None:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.caption("До")
+                st.image(st.session_state.original_image, width="stretch")
+            with col_b:
+                st.caption("После (x4)")
+                st.image(st.session_state.upscaled_image, width="stretch")
+
+            up_buffer = io.BytesIO()
+            st.session_state.upscaled_image.save(up_buffer, format="PNG")
+            st.download_button(
+                label="Скачать увеличенное изображение",
+                data=up_buffer.getvalue(),
+                file_name="upscaled.png",
+                mime="image/png",
+                key="dl_upscaled",
+            )
+
+
+# ---------------- Style transfer block ----------------
+if st.session_state.upscaled_image is not None:
+    with style_section_ph.container():
         st.divider()
         st.subheader("Художественные стили")
 
@@ -149,14 +233,35 @@ if st.session_state.original_image is not None:
             "udnie": "Удни (абстракция)",
         }
 
-        style_display = st.selectbox("Выберите стиль:", list(STYLE_LABELS.values()))
-        style = [k for k, v in STYLE_LABELS.items() if v == style_display][0]
+        style_display = st.selectbox(
+            "Выберите стиль:",
+            list(STYLE_LABELS.values()),
+            key="style_select",
+        )
+        style_key = [k for k, v in STYLE_LABELS.items() if v == style_display][0]
 
-        if st.button("Применить стиль"):
-            with st.spinner("Применение стиля..."):
-                model = load_style_model(style)
-                styled = apply_style(model, st.session_state.upscaled_image)
-                st.session_state.styled_image = styled
+        style_clicked = st.button(
+            "Применить стиль",
+            key="btn_style",
+            disabled=st.session_state.is_styling or st.session_state.is_generating or st.session_state.is_upscaling,
+            use_container_width=True,
+        )
+
+        if style_clicked:
+            st.session_state.is_styling = True
+            status_ph.info("Применение стиля...")
+
+            try:
+                with st.spinner("Применение стиля..."):
+                    model = load_style_model(style_key)
+                    styled = apply_style(model, st.session_state.upscaled_image)
+                    st.session_state.styled_image = styled
+                status_ph.success("Стилизация завершена.")
+            except Exception as e:
+                st.session_state.styled_image = None
+                status_ph.error(f"Ошибка стилизации: {e}")
+            finally:
+                st.session_state.is_styling = False
 
         if st.session_state.styled_image is not None:
             st.subheader("Стилизованное изображение")
@@ -167,8 +272,7 @@ if st.session_state.original_image is not None:
             st.download_button(
                 label="Скачать стилизованное изображение",
                 data=styled_buffer.getvalue(),
-                file_name=f"styled_{style}.png",
+                file_name=f"styled_{style_key}.png",
                 mime="image/png",
+                key="dl_styled",
             )
-else:
-    st.info("Введите текстовое описание и нажмите «Сгенерировать изображение».")
