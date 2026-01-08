@@ -6,9 +6,9 @@ diffusers>=0.27,<0.32
 safetensors>=0.4
 numpy<2
 pillow
-torch==2.2.2
-torchvision==0.17.2
+torch==2.0.1
+torchvision==0.15.2
 streamlit>=1.30
-realesrgan
-basicsr
+realesrgan==0.3.0
+basicsr==1.4.2
 opencv-python
