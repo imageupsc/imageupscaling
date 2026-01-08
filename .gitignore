@@ -12,3 +12,6 @@ checkpoints_edsr/
 saved_models/
 realesr-general-x4v3.pth
 upscaled_result.png
+
+saved_models/
+*.pth
