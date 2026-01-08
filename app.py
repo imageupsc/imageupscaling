@@ -49,20 +49,20 @@ generator = load_generator()
 
 upsampler = load_model()
 
-#tab_upload, tab_generate = st.tabs(["Загрузка изображения", "Генерация по тексту"])
-tab_generate = st.tabs(["Генерация по тексту"])
-#with tab_upload:
-#    uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
-#    if uploaded:
-#        img = Image.open(uploaded).convert("RGB")
-#        st.session_state.original_image = img
-#        st.session_state.upscaled_image = None
-#        st.session_state.styled_image = None
+tab_upload, tab_generate = st.tabs(["Загрузка изображения", "Генерация по тексту"])
+
+with tab_upload:
+    uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+    if uploaded:
+        img = Image.open(uploaded).convert("RGB")
+        st.session_state.original_image = img
+        st.session_state.upscaled_image = None
+        st.session_state.styled_image = None
 
 with tab_generate:
     prompt = st.text_area(
         "Текстовое описание (prompt)",
-        value="A low quality photo of a cat",
+        value="A high quality photo of a cat, studio lighting, sharp focus",
         height=100
     )
     negative = st.text_input("Нежелательные элементы (negative prompt)", value="blurry, low quality, artifacts")
@@ -76,10 +76,7 @@ with tab_generate:
             st.session_state.upscaled_image = None
             st.session_state.styled_image = None
             st.rerun()
-#    if st.session_state.original_image is not None:
-#        st.subheader("Изображение создано")
-#        st.image(st.session_state.original_image, use_container_width=True)
-#        st.rerun()
+
 
 if st.session_state.original_image is not None:
     img = st.session_state.original_image
@@ -97,10 +94,10 @@ if st.session_state.original_image is not None:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Оригинал")
-            st.image(st.session_state.original_image, width="stretch")
+            st.image(st.session_state.original_image, use_container_width=True)
         with col2:
             st.subheader("Увеличенное")
-            st.image(st.session_state.upscaled_image, width="stretch")
+            st.image(st.session_state.upscaled_image, use_container_width=True)
 
         img_buffer = io.BytesIO()
         st.session_state.upscaled_image.save(img_buffer, format="PNG")
@@ -132,7 +129,7 @@ if st.session_state.original_image is not None:
 
         if st.session_state.styled_image is not None:
             st.subheader("Стилизованное изображение")
-            st.image(st.session_state.styled_image, width="stretch")
+            st.image(st.session_state.styled_image, use_container_width=True)
 
             styled_buffer = io.BytesIO()
             st.session_state.styled_image.save(styled_buffer, format="PNG")
