@@ -150,7 +150,8 @@ if gen_clicked:
     percent_ph.write("Прогресс: 0%")
 
     def on_progress(step, total):
-        p = int(step * 100 / total)
+        p = int((step / total) * 100)
+        p = max(0, min(p, 100))
         bar.progress(p)
         percent_ph.write(f"Прогресс: {p}%")
 
