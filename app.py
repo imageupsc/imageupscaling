@@ -76,7 +76,7 @@ guidance = st.slider("Guidance scale", 1.0, 12.0, 7.5)
 
 col_btn1, col_btn2 = st.columns([1, 2])
 with col_btn1:
-    if st.button("Сгенерировать изображение"):
+    if st.button("Сгенерировать изображение 1"):
         with st.spinner("Генерация изображения..."):
             gen_img = generator.generate(
                 prompt=prompt,
@@ -97,7 +97,7 @@ with col_btn2:
 # -------- Preview generated image --------
 if st.session_state.original_image is not None:
     st.divider()
-    st.subheader("Сгенерированное изображение")
+    st.subheader("Сгенерированное изображение 2")
     st.image(st.session_state.original_image, width="stretch")
 
     gen_buffer = io.BytesIO()
