@@ -9,7 +9,14 @@ from image_generation import ImageGenerator
 import io
 
 st.set_page_config(page_title="Генерация и обработка изображений", layout="wide")
-st.markdown(unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+      html, body { overflow-y: scroll; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.title("Генерация и обработка изображений с помощью нейросетей")
 
 # -------- Session state --------
