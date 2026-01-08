@@ -75,11 +75,11 @@ with tab_generate:
             st.session_state.original_image = gen_img
             st.session_state.upscaled_image = None
             st.session_state.styled_image = None
-            
+            st.rerun()
     if st.session_state.original_image is not None:
         st.subheader("Изображение создано")
 #        st.image(st.session_state.original_image, use_container_width=True)
-
+        st.rerun()
 
 if st.session_state.original_image is not None:
     img = st.session_state.original_image
@@ -97,10 +97,10 @@ if st.session_state.original_image is not None:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Оригинал")
-            st.image(st.session_state.original_image, use_container_width=True)
+            st.image(st.session_state.original_image, width="stretch")
         with col2:
             st.subheader("Увеличенное")
-            st.image(st.session_state.upscaled_image, use_container_width=True)
+            st.image(st.session_state.upscaled_image, width="stretch")
 
         img_buffer = io.BytesIO()
         st.session_state.upscaled_image.save(img_buffer, format="PNG")
@@ -132,7 +132,7 @@ if st.session_state.original_image is not None:
 
         if st.session_state.styled_image is not None:
             st.subheader("Стилизованное изображение")
-            st.image(st.session_state.styled_image, use_container_width=True)
+            st.image(st.session_state.styled_image, width="stretch")
 
             styled_buffer = io.BytesIO()
             st.session_state.styled_image.save(styled_buffer, format="PNG")
