@@ -39,14 +39,47 @@ def load_model():
     )
     return upsampler
 
+@st.cache_resource
+def load_generator():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return ImageGenerator(device=device)
+
+generator = load_generator()
+
 
 upsampler = load_model()
 
-uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+tab_upload, tab_generate = st.tabs(["Загрузка изображения", "Генерация по тексту"])
 
-if uploaded:
-    img = Image.open(uploaded).convert("RGB")
-    st.session_state.original_image = img
+with tab_upload:
+    uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+    if uploaded:
+        img = Image.open(uploaded).convert("RGB")
+        st.session_state.original_image = img
+        st.session_state.upscaled_image = None
+        st.session_state.styled_image = None
+
+with tab_generate:
+    prompt = st.text_area(
+        "Текстовое описание (prompt)",
+        value="A high quality photo of a cat, studio lighting, sharp focus",
+        height=100
+    )
+    negative = st.text_input("Нежелательные элементы (negative prompt)", value="blurry, low quality, artifacts")
+    steps = st.slider("Шаги диффузии", 10, 50, 25)
+    guidance = st.slider("Guidance scale", 1.0, 12.0, 7.5)
+
+    if st.button("Сгенерировать изображение"):
+        with st.spinner("Генерация изображения..."):
+            gen_img = generator.generate(prompt, negative_prompt=negative, steps=steps, guidance=guidance)
+            st.session_state.original_image = gen_img
+            st.session_state.upscaled_image = None
+            st.session_state.styled_image = None
+            st.rerun()
+
+
+if st.session_state.original_image is not None:
+    img = st.session_state.original_image
 
     if st.button("Увеличить разрешение"):
         with st.spinner("Обработка изображения..."):
