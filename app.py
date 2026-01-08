@@ -75,7 +75,10 @@ with tab_generate:
             st.session_state.original_image = gen_img
             st.session_state.upscaled_image = None
             st.session_state.styled_image = None
-            st.rerun()
+            
+    if st.session_state.original_image is not None:
+    st.subheader("Сгенерированное изображение")
+    st.image(st.session_state.original_image, use_container_width=True)
 
 
 if st.session_state.original_image is not None:
