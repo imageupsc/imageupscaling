@@ -49,15 +49,15 @@ generator = load_generator()
 
 upsampler = load_model()
 
-tab_upload, tab_generate = st.tabs(["Загрузка изображения", "Генерация по тексту"])
-
-with tab_upload:
-    uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
-    if uploaded:
-        img = Image.open(uploaded).convert("RGB")
-        st.session_state.original_image = img
-        st.session_state.upscaled_image = None
-        st.session_state.styled_image = None
+#tab_upload, tab_generate = st.tabs(["Загрузка изображения", "Генерация по тексту"])
+tab_generate = st.tabs(["Генерация по тексту"])
+#with tab_upload:
+#    uploaded = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+#    if uploaded:
+#        img = Image.open(uploaded).convert("RGB")
+#        st.session_state.original_image = img
+#        st.session_state.upscaled_image = None
+#        st.session_state.styled_image = None
 
 with tab_generate:
     prompt = st.text_area(
