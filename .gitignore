@@ -1,17 +1,21 @@
-venv/
-__pycache__/
-.idea/
+cat >> .gitignore << 'EOF'
+
+# model weights / checkpoints
 *.pth
 *.pt
 *.bin
 *.safetensors
 *.ckpt
 *.onnx
-checkpoints/
-checkpoints_edsr/
-saved_models/
-realesr-general-x4v3.pth
-upscaled_result.png
+*.bak
 
 saved_models/
-*.pth
+checkpoints/
+checkpoints_edsr/
+
+# outputs
+*.png
+*.jpg
+*.jpeg
+upscaled_result.png
+EOF
