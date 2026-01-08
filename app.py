@@ -62,7 +62,7 @@ with tab_upload:
 with tab_generate:
     prompt = st.text_area(
         "Текстовое описание (prompt)",
-        value="A high quality photo of a cat, studio lighting, sharp focus",
+        value="A low quality photo of a cat",
         height=100
     )
     negative = st.text_input("Нежелательные элементы (negative prompt)", value="blurry, low quality, artifacts")
@@ -76,10 +76,10 @@ with tab_generate:
             st.session_state.upscaled_image = None
             st.session_state.styled_image = None
             st.rerun()
-    if st.session_state.original_image is not None:
-        st.subheader("Изображение создано")
+#    if st.session_state.original_image is not None:
+#        st.subheader("Изображение создано")
 #        st.image(st.session_state.original_image, use_container_width=True)
-        st.rerun()
+#        st.rerun()
 
 if st.session_state.original_image is not None:
     img = st.session_state.original_image
