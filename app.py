@@ -138,12 +138,21 @@ if reset_clicked:
 
 
 # ---------------- Actions: Generate ----------------
+progress_ph = st.empty()
+percent_ph = st.empty()
+
 if gen_clicked:
     st.session_state.is_generating = True
     st.session_state.upscaled_image = None
     st.session_state.styled_image = None
 
-    status_ph.info("Генерация изображения...")
+    bar = progress_ph.progress(0)
+    percent_ph.write("Прогресс: 0%")
+
+    def on_progress(step, total):
+        p = int(step * 100 / total)
+        bar.progress(p)
+        percent_ph.write(f"Прогресс: {p}%")
 
     try:
         with st.spinner("Генерация изображения..."):
@@ -152,6 +161,7 @@ if gen_clicked:
                 negative_prompt=negative,
                 steps=int(steps),
                 guidance=float(guidance),
+                on_progress=on_progress,
             )
         st.session_state.original_image = img
         status_ph.success("Генерация завершена.")
@@ -160,6 +170,9 @@ if gen_clicked:
         status_ph.error(f"Ошибка генерации: {e}")
     finally:
         st.session_state.is_generating = False
+        bar.progress(100)
+        percent_ph.write("Прогресс: 100%")
+
 
 
 # ---------------- Preview generated ----------------
