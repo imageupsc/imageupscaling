@@ -83,7 +83,7 @@ st.subheader("Генерация по тексту")
 
 prompt = st.text_area(
     "Текстовое описание (prompt)",
-    value="Маленькая школьница на деревянной лавочке",
+    value="small dog and cat",
     height=110,
     key="prompt",
 )
