@@ -1,14 +1,13 @@
-gradio>=4.0
-huggingface_hub>=0.20
-transformers>=4.37
-accelerate>=0.25
-diffusers>=0.27,<0.32
-safetensors>=0.4
 numpy<2
-pillow
-torch==2.0.1
-torchvision==0.15.2
+torch==2.2.2
+torchvision==0.17.2
+
+diffusers==0.30.0
+transformers==4.41.2
+accelerate==0.31.0
+safetensors==0.4.3
+huggingface_hub>=0.20
+
+# UI (выбери одно)
 streamlit>=1.30
-realesrgan==0.3.0
-basicsr==1.4.2
-opencv-python
+# или gradio>=4.0
