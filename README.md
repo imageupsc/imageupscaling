@@ -3,9 +3,10 @@ title: Imgupsc GEN
 emoji: 🐢
 colorFrom: green
 colorTo: green
-sdk: gradio
+sdk: streamlit
 sdk_version: 6.2.0
 app_file: app.py
+python_version: "3.10"
 pinned: false
 ---
 
