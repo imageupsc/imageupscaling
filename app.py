@@ -6,6 +6,8 @@ from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 from realesrgan import RealESRGANer
 from style_transfer import load_style_model, apply_style
 import io
+from image_generation import ImageGenerator
+
 
 
 st.set_page_config(page_title="Увеличение разрешения изображения", layout="wide")
