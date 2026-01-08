@@ -18,11 +18,21 @@ st.title("Генерация и обработка изображений с п�
 st.markdown(
     """
     <style>
-      html, body { overflow-y: scroll; }
+      /* 1) Всегда резервировать место под скроллбар (убирает сдвиг вправо/влево) */
+      html { scrollbar-gutter: stable; }
+
+      /* 2) На всякий случай — всегда вертикальная прокрутка */
+      html, body { overflow-y: scroll; overflow-x: hidden; }
+
+      /* 3) Streamlit-контейнеры: именно они часто скроллят, а не body */
+      [data-testid="stAppViewContainer"] { overflow-y: scroll; overflow-x: hidden; }
+      [data-testid="stMain"] { overflow-y: scroll; overflow-x: hidden; }
+      section.main { overflow-y: scroll; overflow-x: hidden; }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
 
 # ---------------- Session state ----------------
 defaults = {
