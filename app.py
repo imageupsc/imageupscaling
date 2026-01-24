@@ -21,10 +21,8 @@ st.markdown(
       /* 1) Всегда резервировать место под скроллбар (убирает сдвиг вправо/влево) */
       html { scrollbar-gutter: stable; }
 
-      /* 2) На всякий случай — всегда вертикальная прокрутка */
-      html, body { overflow-y: scroll; overflow-x: hidden; }
 
-      /* 3) Streamlit-контейнеры: именно они часто скроллят, а не body */
+      /* 3) Streamlit-контейнеры: */
       [data-testid="stAppViewContainer"] { overflow-y: scroll; overflow-x: hidden; }
       [data-testid="stMain"] { overflow-y: scroll; overflow-x: hidden; }
       section.main { overflow-y: scroll; overflow-x: hidden; }
@@ -98,7 +96,7 @@ c1, c2 = st.columns(2)
 with c1:
     steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
 with c2:
-    guidance = st.slider("Guidance scale", 1.0, 12.0, 7.5, key="guidance")
+    guidance = st.slider("Коэффициент следования текстовому описанию", 1.0, 12.0, 7.5, key="guidance")
 
 btn_col1, btn_col2 = st.columns([1, 1])
 with btn_col1:
