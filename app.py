@@ -62,7 +62,7 @@ def load_upsampler():
         tile=0,
         tile_pad=10,
         pre_pad=0,
-        half=False,
+        half=False,  # если будет GPU, можно поставить True (но не всегда стабильно)
         device=device,
     )
     return upsampler
@@ -78,25 +78,27 @@ st.subheader("Источник изображения")
 src_col1, src_col2 = st.columns([1.2, 1])
 
 with src_col1:
-    uploaded = st.file_uploader(
+    st.file_uploader(
         "Загрузите изображение (drag&drop или выбор файла)",
         type=["png", "jpg", "jpeg", "webp"],
         key="uploaded_file",
         help="Можно перетащить файл сюда или выбрать вручную.",
     )
 
+# ВАЖНО: читаем из session_state
+uploaded = st.session_state.get("uploaded_file", None)
+
 with src_col2:
     use_uploaded_clicked = st.button(
         "Использовать загруженное изображение",
         key="btn_use_uploaded",
-        disabled=uploaded is None
-                 or st.session_state.is_generating
-                 or st.session_state.is_upscaling
-                 or st.session_state.is_styling,
+        disabled=(uploaded is None)
+        or st.session_state.is_generating
+        or st.session_state.is_upscaling
+        or st.session_state.is_styling,
         use_container_width=True,
     )
 
-# Применение загруженного изображения как original_image
 if use_uploaded_clicked and uploaded is not None:
     try:
         img = Image.open(uploaded).convert("RGB")
@@ -107,7 +109,6 @@ if use_uploaded_clicked and uploaded is not None:
     except Exception as e:
         st.session_state.original_image = None
         st.error(f"Не удалось прочитать изображение: {e}")
-
 
 st.divider()
 
@@ -132,7 +133,9 @@ c1, c2 = st.columns(2)
 with c1:
     steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
 with c2:
-    guidance = st.slider("Коэффициент следования текстовому описанию", 1.0, 12.0, 7.5, key="guidance")
+    guidance = st.slider(
+        "Коэффициент следования текстовому описанию", 1.0, 12.0, 7.5, key="guidance"
+    )
 
 btn_col1, btn_col2 = st.columns([1, 1])
 with btn_col1:
@@ -140,15 +143,17 @@ with btn_col1:
         "Сгенерировать изображение",
         key="btn_generate",
         disabled=st.session_state.is_generating
-                 or st.session_state.is_upscaling
-                 or st.session_state.is_styling,
+        or st.session_state.is_upscaling
+        or st.session_state.is_styling,
         use_container_width=True,
     )
 with btn_col2:
     reset_clicked = st.button(
         "Сбросить результат",
         key="btn_reset",
-        disabled=st.session_state.is_generating or st.session_state.is_upscaling or st.session_state.is_styling,
+        disabled=st.session_state.is_generating
+        or st.session_state.is_upscaling
+        or st.session_state.is_styling,
         use_container_width=True,
     )
 
@@ -167,7 +172,7 @@ if reset_clicked:
     st.session_state.upscaled_image = None
     st.session_state.styled_image = None
 
-    # сброс загрузчика (важно: иначе старый файл останется выбранным)
+    # сброс загрузчика
     st.session_state.uploaded_file = None
 
     status_ph.empty()
@@ -222,11 +227,11 @@ else:
     preview_ph.subheader("Исходное изображение (загруженное или сгенерированное)")
     preview_ph.image(st.session_state.original_image, width="stretch")
 
-    gen_buffer = io.BytesIO()
-    st.session_state.original_image.save(gen_buffer, format="PNG")
+    original_buffer = io.BytesIO()
+    st.session_state.original_image.save(original_buffer, format="PNG")
     download_gen_ph.download_button(
         label="Скачать исходное изображение",
-        data=gen_buffer.getvalue(),
+        data=original_buffer.getvalue(),
         file_name="original.png",
         mime="image/png",
         key="dl_original",
@@ -306,7 +311,9 @@ if st.session_state.upscaled_image is not None:
         style_clicked = st.button(
             "Применить стиль",
             key="btn_style",
-            disabled=st.session_state.is_styling or st.session_state.is_generating or st.session_state.is_upscaling,
+            disabled=st.session_state.is_styling
+            or st.session_state.is_generating
+            or st.session_state.is_upscaling,
             use_container_width=True,
         )
 
