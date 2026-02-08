@@ -18,11 +18,7 @@ st.title("Генерация и обработка изображений с п�
 st.markdown(
     """
     <style>
-      /* 1) Всегда резервировать место под скроллбар (убирает сдвиг вправо/влево) */
       html { scrollbar-gutter: stable; }
-
-
-      /* 3) Streamlit-контейнеры: */
       [data-testid="stAppViewContainer"] { overflow-y: scroll; overflow-x: hidden; }
       [data-testid="stMain"] { overflow-y: scroll; overflow-x: hidden; }
       section.main { overflow-y: scroll; overflow-x: hidden; }
@@ -66,7 +62,7 @@ def load_upsampler():
         tile=0,
         tile_pad=10,
         pre_pad=0,
-        half=False,          # если будет GPU, можно поставить True (но не всегда стабильно на всех окружениях)
+        half=False,
         device=device,
     )
     return upsampler
@@ -76,7 +72,47 @@ generator = load_generator()
 upsampler = load_upsampler()
 
 
-# ---------------- UI: Controls ----------------
+# ---------------- UI: Source (Upload or Generate) ----------------
+st.subheader("Источник изображения")
+
+src_col1, src_col2 = st.columns([1.2, 1])
+
+with src_col1:
+    uploaded = st.file_uploader(
+        "Загрузите изображение (drag&drop или выбор файла)",
+        type=["png", "jpg", "jpeg", "webp"],
+        key="uploaded_file",
+        help="Можно перетащить файл сюда или выбрать вручную.",
+    )
+
+with src_col2:
+    use_uploaded_clicked = st.button(
+        "Использовать загруженное изображение",
+        key="btn_use_uploaded",
+        disabled=uploaded is None
+                 or st.session_state.is_generating
+                 or st.session_state.is_upscaling
+                 or st.session_state.is_styling,
+        use_container_width=True,
+    )
+
+# Применение загруженного изображения как original_image
+if use_uploaded_clicked and uploaded is not None:
+    try:
+        img = Image.open(uploaded).convert("RGB")
+        st.session_state.original_image = img
+        st.session_state.upscaled_image = None
+        st.session_state.styled_image = None
+        st.success("Загруженное изображение установлено как исходное.")
+    except Exception as e:
+        st.session_state.original_image = None
+        st.error(f"Не удалось прочитать изображение: {e}")
+
+
+st.divider()
+
+
+# ---------------- UI: Controls (Text-to-Image) ----------------
 st.subheader("Генерация по тексту")
 
 prompt = st.text_area(
@@ -103,7 +139,9 @@ with btn_col1:
     gen_clicked = st.button(
         "Сгенерировать изображение",
         key="btn_generate",
-        disabled=st.session_state.is_generating,
+        disabled=st.session_state.is_generating
+                 or st.session_state.is_upscaling
+                 or st.session_state.is_styling,
         use_container_width=True,
     )
 with btn_col2:
@@ -128,6 +166,10 @@ if reset_clicked:
     st.session_state.original_image = None
     st.session_state.upscaled_image = None
     st.session_state.styled_image = None
+
+    # сброс загрузчика (важно: иначе старый файл останется выбранным)
+    st.session_state.uploaded_file = None
+
     status_ph.empty()
     preview_ph.empty()
     download_gen_ph.empty()
@@ -173,22 +215,21 @@ if gen_clicked:
         percent_ph.write("Прогресс: 100%")
 
 
-
-# ---------------- Preview generated ----------------
+# ---------------- Preview (original) ----------------
 if st.session_state.original_image is None:
-    preview_ph.info("Введите текстовое описание и нажмите «Сгенерировать изображение».")
+    preview_ph.info("Загрузите изображение сверху или сгенерируйте по тексту ниже.")
 else:
-    preview_ph.subheader("Сгенерированное изображение")
+    preview_ph.subheader("Исходное изображение (загруженное или сгенерированное)")
     preview_ph.image(st.session_state.original_image, width="stretch")
 
     gen_buffer = io.BytesIO()
     st.session_state.original_image.save(gen_buffer, format="PNG")
     download_gen_ph.download_button(
-        label="Скачать сгенерированное изображение",
+        label="Скачать исходное изображение",
         data=gen_buffer.getvalue(),
-        file_name="generated.png",
+        file_name="original.png",
         mime="image/png",
-        key="dl_generated",
+        key="dl_original",
     )
 
 
