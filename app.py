@@ -14,7 +14,6 @@ from style_transfer import load_style_model, apply_style
 st.set_page_config(page_title="Генерация и обработка изображений", layout="wide")
 st.title("Генерация и обработка изображений с помощью нейросетей")
 
-# фикс "дёрганья" интерфейса из-за появления/исчезновения скроллбара
 st.markdown(
     """
     <style>
@@ -36,6 +35,8 @@ defaults = {
     "is_generating": False,
     "is_upscaling": False,
     "is_styling": False,
+    # ключевой фикс для очистки uploader:
+    "uploader_nonce": 0,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -62,7 +63,7 @@ def load_upsampler():
         tile=0,
         tile_pad=10,
         pre_pad=0,
-        half=False,  # если будет GPU, можно поставить True (но не всегда стабильно)
+        half=False,
         device=device,
     )
     return upsampler
@@ -72,21 +73,29 @@ generator = load_generator()
 upsampler = load_upsampler()
 
 
-# ---------------- UI: Source (Upload or Generate) ----------------
+# ---------------- Placeholders ----------------
+status_ph = st.empty()
+preview_ph = st.empty()
+download_gen_ph = st.empty()
+upscale_section_ph = st.empty()
+style_section_ph = st.empty()
+
+
+# ---------------- UI: Source (Upload) ----------------
 st.subheader("Источник изображения")
 
 src_col1, src_col2 = st.columns([1.2, 1])
 
+# динамический key -> можно "очищать" загрузчик увеличением nonce
+uploader_key = f"uploaded_file_{st.session_state.uploader_nonce}"
+
 with src_col1:
-    st.file_uploader(
+    uploaded = st.file_uploader(
         "Загрузите изображение (drag&drop или выбор файла)",
         type=["png", "jpg", "jpeg", "webp"],
-        key="uploaded_file",
+        key=uploader_key,
         help="Можно перетащить файл сюда или выбрать вручную.",
     )
-
-# ВАЖНО: читаем из session_state
-uploaded = st.session_state.get("uploaded_file", None)
 
 with src_col2:
     use_uploaded_clicked = st.button(
@@ -105,10 +114,11 @@ if use_uploaded_clicked and uploaded is not None:
         st.session_state.original_image = img
         st.session_state.upscaled_image = None
         st.session_state.styled_image = None
-        st.success("Загруженное изображение установлено как исходное.")
+        status_ph.success("Загруженное изображение установлено как исходное.")
     except Exception as e:
         st.session_state.original_image = None
-        st.error(f"Не удалось прочитать изображение: {e}")
+        status_ph.error(f"Не удалось прочитать изображение: {e}")
+
 
 st.divider()
 
@@ -157,14 +167,6 @@ with btn_col2:
         use_container_width=True,
     )
 
-# placeholders (чтобы UI не прыгал)
-status_ph = st.empty()
-preview_ph = st.empty()
-download_gen_ph = st.empty()
-
-upscale_section_ph = st.empty()
-style_section_ph = st.empty()
-
 
 # ---------------- Actions: Reset ----------------
 if reset_clicked:
@@ -172,14 +174,17 @@ if reset_clicked:
     st.session_state.upscaled_image = None
     st.session_state.styled_image = None
 
-    # сброс загрузчика
-    st.session_state.uploaded_file = None
+    # ВАЖНО: не трогаем st.session_state[uploader_key] напрямую!
+    # Просто меняем key загрузчика => виджет пересоздастся и файл очистится.
+    st.session_state.uploader_nonce += 1
 
     status_ph.empty()
     preview_ph.empty()
     download_gen_ph.empty()
     upscale_section_ph.empty()
     style_section_ph.empty()
+
+    st.rerun()
 
 
 # ---------------- Actions: Generate ----------------
