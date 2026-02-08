@@ -133,12 +133,6 @@ prompt = st.text_area(
     key="prompt",
 )
 
-negative = st.text_input(
-    "Нежелательные элементы (negative prompt)",
-    value="blurry, low quality, artifacts, text, watermark",
-    key="negative",
-)
-
 c1, c2 = st.columns(2)
 with c1:
     steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
@@ -186,6 +180,7 @@ if reset_clicked:
 
     st.rerun()
 
+NEGATIVE_PROMPT = "blurry, low quality, artifacts, text, watermark"
 
 # ---------------- Actions: Generate ----------------
 progress_ph = st.empty()
@@ -209,7 +204,7 @@ if gen_clicked:
         with st.spinner("Генерация изображения..."):
             img = generator.generate(
                 prompt=prompt,
-                negative_prompt=negative,
+                negative_prompt=NEGATIVE_PROMPT,
                 steps=int(steps),
                 guidance=float(guidance),
                 on_progress=on_progress,
