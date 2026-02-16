@@ -10,6 +10,7 @@ from image_generation import ImageGenerator
 from style_transfer import load_style_model, apply_style
 
 
+
 # ---------------- Page config ----------------
 st.set_page_config(page_title="Генерация и обработка изображений", layout="wide")
 st.title("Генерация и обработка изображений с помощью нейросетей")
@@ -82,76 +83,93 @@ style_section_ph = st.empty()
 
 
 # ---------------- UI: Source (Upload) ----------------
-st.subheader("Источник изображения")
+if st.session_state.original_image is None:
 
-src_col1, src_col2 = st.columns([1.2, 1])
+    st.subheader("Источник изображения")
 
-# динамический key -> можно "очищать" загрузчик увеличением nonce
-uploader_key = f"uploaded_file_{st.session_state.uploader_nonce}"
+    src_col1, src_col2 = st.columns([1.2, 1])
 
-with src_col1:
-    uploaded = st.file_uploader(
-        "Загрузите изображение (drag&drop или выбор файла)",
-        type=["png", "jpg", "jpeg", "webp"],
-        key=uploader_key,
-        help="Можно перетащить файл сюда или выбрать вручную.",
-    )
+    uploader_key = f"uploaded_file_{st.session_state.uploader_nonce}"
 
-with src_col2:
-    use_uploaded_clicked = st.button(
-        "Использовать загруженное изображение",
-        key="btn_use_uploaded",
-        disabled=(uploaded is None)
-        or st.session_state.is_generating
-        or st.session_state.is_upscaling
-        or st.session_state.is_styling,
-        use_container_width=True,
-    )
+    with src_col1:
+        uploaded = st.file_uploader(
+            "Загрузите изображение (drag&drop или выбор файла)",
+            type=["png", "jpg", "jpeg", "webp"],
+            key=uploader_key,
+            help="Можно перетащить файл сюда или выбрать вручную.",
+        )
 
-if use_uploaded_clicked and uploaded is not None:
-    try:
-        img = Image.open(uploaded).convert("RGB")
-        st.session_state.original_image = img
-        st.session_state.upscaled_image = None
-        st.session_state.styled_image = None
-        status_ph.success("Загруженное изображение установлено как исходное.")
-    except Exception as e:
-        st.session_state.original_image = None
-        status_ph.error(f"Не удалось прочитать изображение: {e}")
+    with src_col2:
+        use_uploaded_clicked = st.button(
+            "Использовать загруженное изображение",
+            key="btn_use_uploaded",
+            disabled=(uploaded is None)
+            or st.session_state.is_generating
+            or st.session_state.is_upscaling
+            or st.session_state.is_styling,
+            use_container_width=True,
+        )
 
+    if use_uploaded_clicked and uploaded is not None:
+        try:
+            img = Image.open(uploaded).convert("RGB")
+            st.session_state.original_image = img
+            st.session_state.upscaled_image = None
+            st.session_state.styled_image = None
+            status_ph.success("Загруженное изображение установлено как исходное.")
+            st.rerun()   # ← важно!
+        except Exception as e:
+            st.session_state.original_image = None
+            status_ph.error(f"Не удалось прочитать изображение: {e}")
 
-st.divider()
+    st.divider()
+
+else:
+    uploaded = None
+    use_uploaded_clicked = False
 
 
 # ---------------- UI: Controls (Text-to-Image) ----------------
-st.subheader("Генерация по тексту")
+if st.session_state.original_image is None:
+    st.subheader("Генерация по тексту")
 
-prompt = st.text_area(
-    "Текстовое описание (prompt)",
-    value="small dog and cat",
-    height=110,
-    key="prompt",
-)
-
-c1, c2 = st.columns(2)
-with c1:
-    steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
-with c2:
-    guidance = st.slider(
-        "Коэффициент следования текстовому описанию", 1.0, 12.0, 7.5, key="guidance"
+    prompt = st.text_area(
+        "Текстовое описание (prompt)",
+        value="bridge in the old town",
+        height=110,
+        key="prompt",
     )
 
-btn_col1, btn_col2 = st.columns([1, 1])
-with btn_col1:
-    gen_clicked = st.button(
-        "Сгенерировать изображение",
-        key="btn_generate",
-        disabled=st.session_state.is_generating
-        or st.session_state.is_upscaling
-        or st.session_state.is_styling,
-        use_container_width=True,
-    )
-with btn_col2:
+    c1, c2 = st.columns(2)
+    with c1:
+        steps = st.slider("Шаги диффузии", 10, 50, 25, key="steps")
+    with c2:
+        guidance = st.slider(
+            "Коэффициент следования текстовому описанию", 1.0, 12.0, 7.5, key="guidance"
+        )
+
+    btn_col1, btn_col2 = st.columns([1, 1])
+    with btn_col1:
+        gen_clicked = st.button(
+            "Сгенерировать изображение",
+            key="btn_generate",
+            disabled=st.session_state.is_generating
+            or st.session_state.is_upscaling
+            or st.session_state.is_styling,
+            use_container_width=True,
+        )
+    with btn_col2:
+        reset_clicked = st.button(
+            "Сбросить результат",
+            key="btn_reset",
+            disabled=st.session_state.is_generating
+            or st.session_state.is_upscaling
+            or st.session_state.is_styling,
+            use_container_width=True,
+        )
+else:
+    # чтобы ниже не падало, если переменные используются
+    gen_clicked = False
     reset_clicked = st.button(
         "Сбросить результат",
         key="btn_reset",
@@ -161,15 +179,13 @@ with btn_col2:
         use_container_width=True,
     )
 
-
 # ---------------- Actions: Reset ----------------
 if reset_clicked:
     st.session_state.original_image = None
     st.session_state.upscaled_image = None
     st.session_state.styled_image = None
 
-    # ВАЖНО: не трогаем st.session_state[uploader_key] напрямую!
-    # Просто меняем key загрузчика => виджет пересоздастся и файл очистится.
+    # Меняем key загрузчика => виджет пересоздастся и файл очистится.
     st.session_state.uploader_nonce += 1
 
     status_ph.empty()
@@ -211,6 +227,7 @@ if gen_clicked:
             )
         st.session_state.original_image = img
         status_ph.success("Генерация завершена.")
+        st.rerun()
     except Exception as e:
         st.session_state.original_image = None
         status_ph.error(f"Ошибка генерации: {e}")
@@ -242,10 +259,10 @@ else:
 if st.session_state.original_image is not None:
     with upscale_section_ph.container():
         st.divider()
-        st.subheader("Увеличение разрешения (Real-ESRGAN x4)")
+        st.subheader("Улучшение качества изображения")
 
         up_clicked = st.button(
-            "Увеличить разрешение",
+            "Улучшить изображение",
             key="btn_upscale",
             disabled=st.session_state.is_upscaling or st.session_state.is_generating,
             use_container_width=True,
@@ -253,15 +270,15 @@ if st.session_state.original_image is not None:
 
         if up_clicked:
             st.session_state.is_upscaling = True
-            status_ph.info("Увеличение разрешения...")
+            status_ph.info("Улучшение изображения...")
 
             try:
-                with st.spinner("Увеличение разрешения..."):
+                with st.spinner("Улучшение изображения..."):
                     img_np = np.array(st.session_state.original_image.convert("RGB"))
                     output, _ = upsampler.enhance(img_np, outscale=4)
                     st.session_state.upscaled_image = Image.fromarray(output)
                     st.session_state.styled_image = None
-                status_ph.success("Увеличение разрешения завершено.")
+                status_ph.success("Улучшение изображения завершено.")
             except Exception as e:
                 st.session_state.upscaled_image = None
                 status_ph.error(f"Ошибка апскейла: {e}")
@@ -271,16 +288,16 @@ if st.session_state.original_image is not None:
         if st.session_state.upscaled_image is not None:
             col_a, col_b = st.columns(2)
             with col_a:
-                st.caption("До")
+                st.caption("Оригинал")
                 st.image(st.session_state.original_image, width="stretch")
             with col_b:
-                st.caption("После (x4)")
+                st.caption("Улучшенная версия")
                 st.image(st.session_state.upscaled_image, width="stretch")
 
             up_buffer = io.BytesIO()
             st.session_state.upscaled_image.save(up_buffer, format="PNG")
             st.download_button(
-                label="Скачать увеличенное изображение",
+                label="Скачать улучшенное изображение",
                 data=up_buffer.getvalue(),
                 file_name="upscaled.png",
                 mime="image/png",
@@ -289,14 +306,14 @@ if st.session_state.original_image is not None:
 
 
 # ---------------- Style transfer block ----------------
-if st.session_state.upscaled_image is not None:
+if st.session_state.original_image is not None:
     with style_section_ph.container():
         st.divider()
         st.subheader("Художественные стили")
 
         STYLE_LABELS = {
-            "candy": "Конфетный",
             "mosaic": "Мозаика",
+            "candy": "Конфетный",
             "rain_princess": "Принцесса дождя",
             "udnie": "Удни (абстракция)",
         }
@@ -324,7 +341,7 @@ if st.session_state.upscaled_image is not None:
             try:
                 with st.spinner("Применение стиля..."):
                     model = load_style_model(style_key)
-                    styled = apply_style(model, st.session_state.upscaled_image)
+                    styled = apply_style(model, st.session_state.original_image)
                     st.session_state.styled_image = styled
                 status_ph.success("Стилизация завершена.")
             except Exception as e:

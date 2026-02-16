@@ -19,3 +19,6 @@ checkpoints_edsr/
 *.jpeg
 upscaled_result.png
 EOF
+/Model_training/train.py
+/Model_training/img_degraid.py
+/Model_training/dataset_paired.py
