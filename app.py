@@ -10,22 +10,25 @@ from image_generation import ImageGenerator
 from style_transfer import load_style_model, apply_style
 
 
-
 # ---------------- Page config ----------------
-st.set_page_config(page_title="Генерация и обработка изображений", layout="wide")
+st.set_page_config(page_title="Генерация и обработка изображений", layout="centered")
 st.title("Генерация и обработка изображений с помощью нейросетей")
 
-st.markdown(
-    """
-    <style>
-      html { scrollbar-gutter: stable; }
-      [data-testid="stAppViewContainer"] { overflow-y: scroll; overflow-x: hidden; }
-      [data-testid="stMain"] { overflow-y: scroll; overflow-x: hidden; }
-      section.main { overflow-y: scroll; overflow-x: hidden; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+/* главный контейнер контента */
+div[data-testid="stMainBlockContainer"] {
+    max-width: 60vw !important;
+    width: 60vw !important;
+}
+
+/* центрирование */
+div[data-testid="stMainBlockContainer"] > div {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
 # ---------------- Session state ----------------
