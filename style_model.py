@@ -3,29 +3,29 @@ from torch import nn
 
 
 class ConvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride):
+    def __init__(self, in_channels, out_channels, kernel_size, stride):# количество входных каналов, сколько фильтров, размер ядра свертки, шаг свертки
         super(ConvLayer, self).__init__()
-        padding = kernel_size // 2
-        self.reflection_pad = nn.ReflectionPad2d(padding)
+        padding = kernel_size // 2  #внутренний отступ
+        self.reflection_pad = nn.ReflectionPad2d(padding) #отражение
         self.conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride)
 
-    def forward(self, x):
+    def forward(self, x): # X-входной тензор размера
         out = self.reflection_pad(x)
         out = self.conv2d(out)
         return out
 
 
-class ResidualBlock(nn.Module):
+class ResidualBlock(nn.Module):#остаточный блок, сверточное преобразование+остаток
     def __init__(self, channels):
         super(ResidualBlock, self).__init__()
         self.conv1 = ConvLayer(channels, channels, 3, 1)
-        self.in1 = nn.InstanceNorm2d(channels, affine=True)
+        self.in1 = nn.InstanceNorm2d(channels, affine=True)#по каждому каналу+добавляются обучаемые параметры
         self.conv2 = ConvLayer(channels, channels, 3, 1)
         self.in2 = nn.InstanceNorm2d(channels, affine=True)
 
     def forward(self, x):
         residual = x
-        out = torch.relu(self.in1(self.conv1(x)))
+        out = torch.relu(self.in1(self.conv1(x)))#свертка+нормализация+ReLU
         out = self.in2(self.conv2(out))
         out = out + residual
         return out

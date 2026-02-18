@@ -26,7 +26,7 @@ class ImageGenerator:
     ):
         total_steps = int(steps)
 
-        # diffusers обычно передаёт step index с нуля
+        # diffusers передаёт step index с нуля
         def _callback(step: int, timestep: int, latents):
             if on_progress is not None:
                 on_progress(step, total_steps)

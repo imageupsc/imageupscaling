@@ -40,12 +40,12 @@ defaults = {
     "is_generating": False,
     "is_upscaling": False,
     "is_styling": False,
-    # ключевой фикс для очистки uploader:
+    # ключевой фикс для очистки file_uploader - st.session_state.uploader_nonce += 1
     "uploader_nonce": 0,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
-        st.session_state[k] = v
+        st.session_state[k] = v #Чтобы данные не терялись между перезапусками
 
 
 # ---------------- Cached model loaders ----------------
